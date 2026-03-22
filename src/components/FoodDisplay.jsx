@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { db, storage } from "../firebase";
-import { FaTrash, FaEdit } from "react-icons/fa";
+import { FaTrash, FaEdit, FaShareAlt } from "react-icons/fa";
 import { FaRegCommentDots } from "react-icons/fa6";
 import { toast } from "react-toastify";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
@@ -196,6 +196,39 @@ export default function Dishes() {
     }
   };
 
+  const handleShare = async (dish) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}#dishes`;
+    const shareTitle = capitalizeWords(dish.name) || "Cedar Cafe Dish";
+    const shareText = `${capitalizeWords(dish.name)} - ₦${dish.priceDiscounted?.toLocaleString()}\n${dish.description}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(
+          `${shareTitle}\n${shareText}\n${shareUrl}`
+        );
+        toast.success("Dish link copied to clipboard");
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = `${shareTitle}\n${shareText}\n${shareUrl}`;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+        toast.success("Dish link copied to clipboard");
+      }
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        toast.error("Unable to share this dish right now");
+      }
+    }
+  };
+
   const filteredDishes = dishes.filter((dish) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -292,7 +325,7 @@ export default function Dishes() {
                     </p>
                   </div>
 
-                  <div className="flex justify-between items-center gap-3 mb-4">
+                  <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
                     <button
                       onClick={() => handleLike(dish.id)}
                       className="text-pink-600 hover:text-pink-700 font-medium text-sm"
@@ -310,6 +343,14 @@ export default function Dishes() {
                     >
                       <FaRegCommentDots className="mr-1" />
                       {commentsMap[dish.id]?.length || 0}
+                    </button>
+
+                    <button
+                      onClick={() => handleShare(dish)}
+                      className="text-green-700 hover:text-green-800 flex items-center text-sm font-medium"
+                    >
+                      <FaShareAlt className="mr-1" />
+                      Share
                     </button>
 
                     <button
